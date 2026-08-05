@@ -1,6 +1,6 @@
 # Ayers Loan Application — web form
 
-**Live:** https://haohuilu.github.io/ayersapplicationform/
+**Live:** https://haohuilu.com/ayersapplicationform/
 
 > This repository is **public**. It holds the blank form only. Never commit a completed
 > application — the exported JSON and PDF contain client personal and financial details.
