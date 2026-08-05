@@ -573,7 +573,7 @@ input[readonly] {
   width: var(--page-w);
   max-width: 100%;
   margin: 0 auto 40px;
-  padding: 26px 46px 30px;
+  padding: 26px 46px 28px;
   background: #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, .16);
   text-align: center;
@@ -584,14 +584,6 @@ input[readonly] {
   padding: 0 46px;
   font-size: 13px;
   letter-spacing: .08em;
-}
-
-.finish-note {
-  font-size: 11px;
-  color: var(--label);
-  margin: 12px auto 0;
-  max-width: 460px;
-  line-height: 1.5;
 }
 
 /* Spacing helpers. These exist as classes rather than inline styles so the
