@@ -893,7 +893,6 @@
       if (!window.confirm('Clear the whole form?\n\nAnything not downloaded will be lost.')) { return; }
       localStorage.removeItem(STORAGE_KEY);
       clearForm();
-      $('#autosave').textContent = '';
       window.scrollTo({ top: 0 });
       say('Form cleared');
     });
@@ -904,17 +903,8 @@
       clearTimeout(autosaveTimer);
       autosaveTimer = setTimeout(function () {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(collect()));
-        noteAutosave(new Date());
       }, 1200);
     });
-  }
-
-  /* A broker filling this in front of a client should never have to wonder
-     whether their work is safe. */
-  function noteAutosave(when) {
-    var el = $('#autosave');
-    if (!el) { return; }
-    el.textContent = 'Autosaved ' + when.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
   }
 
   function restore() {
@@ -923,7 +913,6 @@
     try {
       var data = JSON.parse(raw);
       apply(data);
-      noteAutosave(new Date(data.savedAt));
       say('Restored where you left off');
       return true;
     } catch (err) { return false; }
