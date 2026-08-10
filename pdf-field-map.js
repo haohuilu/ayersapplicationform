@@ -4,16 +4,15 @@
 window.AYERS_PDF_MAP = {
  "broker": "Broker",
  "interview_date": "Interview Date",
- "purpose_buy": "Purpose Box 1",
  "purpose_build": "Purpose Box 3",
  "purpose_renovate": "Purpose Box 5",
  "purpose_refinance": "Purpose Box 2",
  "purpose_topup": "Purpose Box 4",
  "purpose_other": "Purpose Box 6",
  "usage_owner_occupied": "Usage box 1",
- "usage_smsf": "Usage box 3",
+ "usage_smsf": "Usage box 4",
  "usage_business": "Usage box 2",
- "usage_investment": "Usage box 4",
+ "usage_investment": "Usage box 3",
  "significant_change_yes": "Box 35",
  "significant_change_no": "Box 36",
  "a1_title": "Title List Box 1",
@@ -232,6 +231,7 @@ window.AYERS_PDF_MAP = {
  "additional_total": "NA 54",
  "total_living_expenses": "NA 56",
  "loan_amount": "Loan Amount Requested",
- "loan_term_years": "Loan Term",
- "security_address": "Security Property Address"
+ "security_address": "Security Property Address",
+ "purpose_purchase": "Purpose Box 1",
+ "borrower_entity": "Borrower"
 };

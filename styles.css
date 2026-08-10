@@ -499,6 +499,8 @@ input[readonly] {
 
 /* ---------- Misc ---------- */
 
+.field > label .lbl-note { color: var(--label); font-weight: 400; }
+
 .hint { font-size: 10px; color: var(--label); margin: 3px 0 0; }
 
 /* ---------- End of form ---------- */
