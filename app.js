@@ -1,5 +1,5 @@
 /* Ayers Loan Application - web form
-   Rebuild of the printed PDF (version 3) with repeatable property and
+   Rebuild of the printed PDF (version 2026.1) with repeatable property and
    employment entries. No dependencies, no build step. */
 
 (function () {
@@ -31,7 +31,8 @@
     ['casual', 'Casual'],
     ['part_time', 'Part Time'],
     ['self_employed', 'Self-Employed'],
-    ['contractor', 'Contractor']
+    ['contractor', 'Contractor'],
+    ['home_duties', 'Home Duties']
   ];
 
   var GENERAL_EXPENSES = [
@@ -44,8 +45,7 @@
     ['transport', 'Transport'],
     ['education', 'Education'],
     ['childcare', 'Childcare'],
-    ['general_insurance', 'General Insurance'],
-    ['general_others', 'Others']
+    ['general_insurance', 'General Insurance']
   ];
 
   var ADDITIONAL_EXPENSES_TOP = [
@@ -56,34 +56,38 @@
   ];
 
   var ADDITIONAL_EXPENSES_BOTTOM = [
-    ['boarding_rent_expenses', 'Boarding / Rent Expenses (on-going)'],
-    ['additional_others', 'Others']
+    ['boarding_rent_expenses', 'Boarding / Rent Expenses (on-going)']
   ];
 
+  /* Assets and liabilities.
+     `repeat` entries start as a single row with a + to add more; the rest are
+     one-offs. Superannuation is not listed here — it is generated to match the
+     number of people on the application. */
   var ASSETS_LEFT = [
-    ['motor_vehicle_1_value', 'Motor Vehicle Value', 'money', 'motor_vehicle_1_make', 'Make', 'text'],
-    ['motor_vehicle_2_value', 'Motor Vehicle Value', 'money', 'motor_vehicle_2_make', 'Make', 'text'],
-    ['savings_1', 'Savings', 'money', 'savings_1_bank', 'Bank', 'text'],
-    ['savings_2', 'Savings', 'money', 'savings_2_bank', 'Bank', 'text'],
+    { repeat: 'motor_vehicle', label: 'Motor Vehicle Value', add: '+ Add vehicle',
+      main: function (i) { return 'motor_vehicle_' + i + '_value'; }, mainType: 'money',
+      secLabel: 'Make', sec: function (i) { return 'motor_vehicle_' + i + '_make'; }, secType: 'text' },
+    { repeat: 'savings', label: 'Savings', add: '+ Add savings',
+      main: function (i) { return 'savings_' + i; }, mainType: 'money',
+      secLabel: 'Bank', sec: function (i) { return 'savings_' + i + '_bank'; }, secType: 'text' },
     ['other_investments', 'Other investments (e.g. shares)', 'money', null, null, null],
     ['deposit_paid', 'Deposit Paid', 'money', null, null, null],
     ['non_refundable_gift', 'Non-Refundable Gift', 'money', null, null, null],
     ['home_contents', 'Home Contents', 'money', null, null, null],
-    ['superannuation_1', 'Superannuation (Applicant 1)', 'money', null, null, null],
-    ['superannuation_2', 'Superannuation (Applicant 2)', 'money', null, null, null]
+    { supers: true }
   ];
 
   var ASSETS_RIGHT = [
-    ['credit_card_1_limit', 'Credit Card #1 Limit', 'money', 'credit_card_1_bank', 'Bank', 'text'],
-    ['credit_card_2_limit', 'Credit Card #2 Limit', 'money', 'credit_card_2_bank', 'Bank', 'text'],
-    ['credit_card_3_limit', 'Credit Card #3 Limit', 'money', 'credit_card_3_bank', 'Bank', 'text'],
-    ['credit_card_4_limit', 'Credit Card #4 Limit', 'money', 'credit_card_4_bank', 'Bank', 'text'],
+    { repeat: 'credit_card', label: 'Credit Card #%n Limit', add: '+ Add credit card',
+      main: function (i) { return 'credit_card_' + i + '_limit'; }, mainType: 'money',
+      secLabel: 'Bank', sec: function (i) { return 'credit_card_' + i + '_bank'; }, secType: 'text' },
     ['personal_loan_limit', 'Personal Loan Limit', 'money', 'personal_loan_bank', 'Bank', 'text'],
-    ['car_loan_1_limit', 'Car Loan #1 Limit', 'money', 'car_loan_1_monthly', 'Per Month', 'money'],
-    ['car_loan_2_limit', 'Car Loan #2 Limit', 'money', 'car_loan_2_monthly', 'Per Month', 'money'],
+    { repeat: 'car_loan', label: 'Car Loan #%n Limit', add: '+ Add car loan',
+      main: function (i) { return 'car_loan_' + i + '_limit'; }, mainType: 'money',
+      secLabel: 'Per Month', sec: function (i) { return 'car_loan_' + i + '_monthly'; }, secType: 'money' },
     ['rent_boarding_fee', 'Rent/Boarding Fee', 'money', 'rent_boarding_weekly', 'Per Week', 'money'],
     ['hecs_balance', 'HECS Balance', 'money', 'hecs_monthly', 'Per Month', 'money'],
-    ['liability_others', 'Others (please specify)', 'text', null, null, null]
+    ['buy_now_pay_later', 'Buy Now Pay Later', 'money', 'buy_now_pay_later_provider', 'Bank/Provider', 'text']
   ];
 
   /* ------------------------------------------------------------------ */
@@ -144,7 +148,28 @@
     '</div>';
   }
 
+  /* One row of a repeatable asset group (vehicles, savings, cards, car loans). */
+  function assetRow(g, i) {
+    var mainName = g.main(i), secName = g.sec(i);
+    return '<div class="pair-row" data-asset-row="' + g.repeat + '" data-asset-index="' + i + '">' +
+      '<label for="' + mainName + '">' + g.label.replace('%n', i) + '</label>' +
+      fieldControl(mainName, g.mainType) +
+      '<label for="' + secName + '" class="sec">' + g.secLabel + '</label>' +
+      '<span class="pair-end">' + fieldControl(secName, g.secType) +
+        '<button type="button" class="btn-remove no-print" data-remove="asset" ' +
+        'title="Remove">&times;</button></span>' +
+    '</div>';
+  }
+
+  function assetGroup(g) {
+    return '<div data-asset-group="' + g.repeat + '">' + assetRow(g, 1) + '</div>' +
+      '<div class="add-row no-print"><button type="button" class="btn btn-sm" ' +
+      'data-add-asset="' + g.repeat + '">' + g.add + '</button></div>';
+  }
+
   function pairRow(cfg) {
+    if (cfg.supers) { return '<div id="super-rows"></div>'; }
+    if (cfg.repeat) { return assetGroup(cfg); }
     var mainName = cfg[0], mainLabel = cfg[1], mainType = cfg[2];
     var secName = cfg[3], secLabel = cfg[4], secType = cfg[5];
     var out = '<div class="pair-row"><label for="' + mainName + '">' + mainLabel + '</label>';
@@ -168,6 +193,27 @@
   /* ------------------------------------------------------------------ */
   /* Personal details                                                    */
   /* ------------------------------------------------------------------ */
+
+  /* A person on the application: applicant or guarantor. The first two are
+     permanent — employment and income are keyed to them — and any beyond that
+     are added and removed with the + button. */
+  function personBlock(n) {
+    var p = 'a' + n + '_';
+    return '<div class="person" data-person-card data-person-index="' + n + '">' +
+      '<div class="person-head">' +
+        '<h2 class="bar">Personal Details ' + n + '</h2>' +
+        (n > 2 ? '<button type="button" class="btn-remove no-print" data-remove="person" ' +
+                 'title="Remove this person">&times;</button>' : '') +
+      '</div>' +
+      '<div class="ticks two role-ticks">' +
+        '<label class="tick"><input type="checkbox" name="' + p + 'role_applicant" ' +
+          'data-excl="' + p + 'role"> Applicant</label>' +
+        '<label class="tick"><input type="checkbox" name="' + p + 'role_guarantor" ' +
+          'data-excl="' + p + 'role"> Guarantor</label>' +
+      '</div>' +
+      personalBlock(n) +
+    '</div>';
+  }
 
   function personalBlock(n) {
     var p = 'a' + n + '_';
@@ -194,9 +240,10 @@
       '<div class="row r-dep">' +
         '<div class="field">' +
           '<span class="field-label">Number &amp; Age of Dependents</span>' +
-          '<div class="row r-2">' +
-            '<input type="text" name="' + p + 'dependents_number" aria-label="Number of dependents">' +
-            '<input type="text" name="' + p + 'dependents_ages" aria-label="Age of dependents">' +
+          '<div class="dependent-inputs">' +
+            '<input type="number" min="0" max="20" inputmode="numeric" class="dependents-number" ' +
+              'name="' + p + 'dependents_number" aria-label="Number of dependents" placeholder="Number">' +
+            '<div class="dependent-ages" data-dependent-ages></div>' +
           '</div>' +
         '</div>' +
         text(p + 'drivers_licence', 'Driver&rsquo;s License Number') +
@@ -250,6 +297,26 @@
       '</div>' +
       '<div class="tick-group-label">Employment Status</div>' +
       tickList(p + 'status_', EMPLOYMENT_STATUS, p + 'status', 2) +
+      '<div class="self-employed-income" data-self-employed-income hidden>' +
+        '<div class="self-employed-income-group">' +
+          '<div class="subhead">Self-Employed Individual Income</div>' +
+          '<div class="row r-2 self-employed-income-values">' +
+            money(p + 'self_employed_recent_fy_individual_income',
+                  'Most Recent FY Individual Income') +
+            money(p + 'self_employed_prior_fy_individual_income',
+                  'Prior FY Individual Income') +
+          '</div>' +
+        '</div>' +
+        '<div class="self-employed-income-group">' +
+          '<div class="subhead">Self-Employed Business Income</div>' +
+          '<div class="row r-2 self-employed-income-values">' +
+            money(p + 'self_employed_recent_fy_business_income',
+                  'Most Recent FY Business Income') +
+            money(p + 'self_employed_prior_fy_business_income',
+                  'Prior FY Business Income') +
+          '</div>' +
+        '</div>' +
+      '</div>' +
       text(p + 'employer_name', 'Employer&rsquo;s Name') +
       text(p + 'job_title', 'Job Title') +
       '<div class="field"><label for="' + p + 'employer_address">Employer&rsquo;s Address</label>' +
@@ -268,9 +335,9 @@
       '<div class="add-row no-print">' +
         '<button type="button" class="btn" data-add-emp="' + n + '">+ Add job</button>' +
       '</div>' +
-      '<p class="hint no-print">Add an entry for each job, then tick <strong>Current job</strong> on any that are ' +
-      'still held &mdash; an applicant can have more than one. Include previous employers if they have been with ' +
-      'their current employer for less than 3 years.</p>';
+      '<div class="hint no-print"><strong>Previous Employment Details</strong><br>' +
+      '(Complete if you have worked for your current employer for less than 3 years. ' +
+      'Give details of your main job only.)</div>';
   }
 
   /* ------------------------------------------------------------------ */
@@ -298,7 +365,7 @@
       '<span class="income-label is-total">Total Income (all jobs)</span>' +
       '<span></span><span></span><span></span><span></span>' +
       '<div class="money"><span>$</span><input type="text" id="' + totalName + '" name="' + totalName +
-      '" readonly></div>' +
+      '"></div>' +
     '</div>';
 
     return '<div class="subhead spaced-sm">Applicant ' + n + ' Income Details (Annual)</div>' +
@@ -320,7 +387,7 @@
       '<div class="income-cell">' +
         '<label class="income-cell-label" for="' + p + 'total">Total Income</label>' +
         '<div class="money"><span>$</span><input type="text" id="' + p + 'total" name="' + p +
-        'total" readonly></div>' +
+        'total"></div>' +
       '</div>' +
     '</div>';
   }
@@ -369,7 +436,6 @@
 
     // With a single job the line total is the total; no need to repeat it.
     totalLine.hidden = jobs.length < 2;
-    recalc();
   }
 
   /* ------------------------------------------------------------------ */
@@ -386,15 +452,20 @@
              '" aria-label="' + ph + '"></td>';
     }
     return '<tr data-property-row>' +
-      '<td><input type="text" name="' + p + 'address' + '" aria-label="Address of the property"></td>' +
+      // a textarea, not an input: the column is narrow and a long address
+      // would otherwise scroll out of sight as it is typed
+      '<td><textarea name="' + p + 'address" rows="2" aria-label="Address of the property"></textarea></td>' +
       cell('interest_rate', 'Interest rate') +
       '<td><select name="' + p + 'repayment_type" aria-label="Repayment type">' + opts(REPAYMENT) + '</select></td>' +
+      cell('remaining_term', 'Remaining loan term') +
       cellMoney('market_value', 'Estimated market value') +
       cellMoney('loan_limit', 'Loan limit') +
       cell('bank', 'Bank') +
       cellMoney('monthly_repayment', 'Monthly repayment') +
       cellMoney('weekly_rental', 'Weekly rental') +
       cell('owner_percent', 'Owner percent') +
+      '<td class="tick-cell"><label class="tick"><input type="checkbox" name="' + p +
+        'to_be_refinanced" aria-label="To be refinanced"></label></td>' +
       '<td class="row-tools no-print">' +
         '<button type="button" class="btn-remove" data-remove="property" title="Remove this property">&times;</button>' +
       '</td>' +
@@ -419,11 +490,68 @@
 
   function totalRow(name, label) {
     return '<div class="exp-row is-total"><label for="' + name + '">' + label + '</label>' +
-      '<div class="money"><span>$</span><input type="text" id="' + name + '" name="' + name + '" readonly></div></div>';
+      '<div class="money"><span>$</span><input type="text" id="' + name + '" name="' + name + '"></div></div>';
   }
 
   function investmentRow(i) {
     return expenseRow('investment_property_' + i + '_expense', 'Investment Property ' + i, 'additional', true);
+  }
+
+  function otherExpenseBase(group, i) {
+    return group + '_others' + (i === 1 ? '' : '_' + i);
+  }
+
+  function otherExpenseRow(group, i) {
+    var base = otherExpenseBase(group, i);
+    return '<div class="exp-row" data-other-row="' + group + '" data-other-index="' + i + '">' +
+      '<div class="expense-other"><label for="' + base + '_detail">Other' + (i > 1 ? ' ' + i : '') + '</label>' +
+        '<input type="text" id="' + base + '_detail" name="' + base +
+        '_detail" placeholder="Please specify"></div>' +
+      '<div class="rm"><div class="money" style="flex:1"><span>$</span>' +
+        '<input type="text" inputmode="decimal" class="amount" data-sum="' + group +
+        '" id="' + base + '" name="' + base + '"></div>' +
+        '<button type="button" class="btn-remove no-print" data-remove="other" data-other-group="' +
+        group + '" title="Remove this expense">&times;</button></div>' +
+    '</div>';
+  }
+
+  /* Grow a textarea to fit what has been typed, so nothing is hidden below
+     the fold of a small box — the property address column is narrow enough
+     that a real address runs to three or four lines. */
+  function autoGrow(el) {
+    if (!el || el.tagName !== 'TEXTAREA') { return; }
+    var min = parseFloat(el.getAttribute('data-min-height') || 0);
+    if (!min) {
+      min = el.getBoundingClientRect().height || 0;
+      el.setAttribute('data-min-height', min);
+    }
+    el.style.height = 'auto';
+    el.style.height = Math.max(min, el.scrollHeight) + 'px';
+  }
+
+  function growAll() { $$('#loan-form textarea').forEach(autoGrow); }
+
+  function syncDependentAges(numberInput) {
+    if (!numberInput) { return; }
+    var field = numberInput.closest('.field');
+    var container = field && $('[data-dependent-ages]', field);
+    if (!container) { return; }
+
+    var count = parseInt(numberInput.value, 10);
+    count = isNaN(count) ? 0 : Math.max(0, Math.min(20, count));
+    var prefix = numberInput.name.replace(/dependents_number$/, '');
+    var existing = $$('input', container).map(function (el) { return el.value; });
+    var html = '';
+    for (var i = 1; i <= count; i++) {
+      html += '<input type="number" min="0" max="99" inputmode="numeric" name="' + prefix +
+        'dependent_' + i + '_age" aria-label="Dependent ' + i + ' age" placeholder="Age ' + i + '">';
+    }
+    container.innerHTML = html;
+    $$('input', container).forEach(function (el, i) { el.value = existing[i] || ''; });
+  }
+
+  function syncAllDependentAges() {
+    $$('.dependents-number').forEach(syncDependentAges);
   }
 
   /* ------------------------------------------------------------------ */
@@ -441,40 +569,10 @@
     return n.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   }
 
-  function sumNames(names) {
-    return names.reduce(function (t, name) {
-      var el = document.querySelector('[name="' + name + '"]');
-      return t + (el ? num(el.value) : 0);
-    }, 0);
-  }
-
-  function recalc() {
-    [1, 2].forEach(function (n) {
-      var grid = $('[data-income-list="' + n + '"]');
-      if (!grid) { return; }
-      var total = 0;
-
-      $$('[data-income-row]', grid).forEach(function (row, idx) {
-        var p = 'a' + n + '_income_' + (idx + 1) + '_';
-        var line = sumNames(INCOME_COLUMNS.map(function (c) { return p + c[0]; }));
-        var el = document.querySelector('[name="' + p + 'total"]');
-        if (el) { el.value = fmt(line); }
-        total += line;
-      });
-
-      var grand = document.querySelector('[name="a' + n + '_income_total"]');
-      if (grand) { grand.value = fmt(total); }
-    });
-
-    var general = 0, additional = 0;
-    $$('[data-sum="general"]').forEach(function (el) { general += num(el.value); });
-    $$('[data-sum="additional"]').forEach(function (el) { additional += num(el.value); });
-
-    var g = $('#general_total'), a = $('#additional_total'), t = $('#total_living_expenses');
-    if (g) { g.value = fmt(general); }
-    if (a) { a.value = fmt(additional); }
-    if (t) { t.value = fmt(general + additional); }
-  }
+  /* Totals are entered by hand.
+     They used to be calculated and locked, but the downloaded PDF stays
+     editable — so a broker changing a figure there would have been left with
+     a total that silently disagreed with the numbers above it. */
 
   /* ------------------------------------------------------------------ */
   /* Repeatable list management                                          */
@@ -504,6 +602,13 @@
   function isCurrentCard(card) {
     var cb = $('[data-current]', card);
     return !!(cb && cb.checked);
+  }
+
+  function syncSelfEmployed(card) {
+    if (!card) { return; }
+    var option = $('[name$="_status_self_employed"]', card);
+    var fields = $('[data-self-employed-income]', card);
+    if (fields) { fields.hidden = !(option && option.checked); }
   }
 
   /* Keep current jobs above previous employers, preserving the order within
@@ -559,6 +664,7 @@
       $('.card-title', card).textContent = title;
 
       $('[data-remove="emp"]', card).style.visibility = cards.length > 1 ? 'visible' : 'hidden';
+      syncSelfEmployed(card);
     });
 
     syncIncome(n);
@@ -619,12 +725,123 @@
     return anchor.lastElementChild;
   }
 
+  function renumberOtherExpenses(group) {
+    var rows = $$('[data-other-row="' + group + '"]');
+    rows.forEach(function (row, idx) {
+      var i = idx + 1;
+      var current = parseInt(row.getAttribute('data-other-index'), 10);
+      if (current !== i) {
+        renameFields(row, otherExpenseBase(group, current), otherExpenseBase(group, i));
+        row.setAttribute('data-other-index', i);
+      }
+      row.querySelector('.expense-other label').textContent = i === 1 ? 'Others' : 'Other ' + i;
+      $('[data-remove="other"]', row).style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+    });
+  }
+
+  function addOtherExpense(group) {
+    var anchor = $('#' + group + '-other-expenses');
+    var i = $$('[data-other-row="' + group + '"]').length + 1;
+    anchor.insertAdjacentHTML('beforeend', otherExpenseRow(group, i));
+    renumberOtherExpenses(group);
+    return anchor.lastElementChild;
+  }
+
+  /* People 1 and 2 are permanent; only the extras are renumbered, so the
+     employment and income sections keyed to a1_ and a2_ stay put. */
+  function renumberPeople() {
+    var cards = $$('[data-person-card]');
+    cards.forEach(function (card, idx) {
+      var i = idx + 1;
+      if (i <= 2) { return; }
+      var was = card.getAttribute('data-person-index');
+      if (was !== String(i)) {
+        renameFields(card, 'a' + was + '_', 'a' + i + '_');
+        card.setAttribute('data-person-index', i);
+      }
+      $('.bar', card).textContent = 'Personal Details ' + i;
+    });
+    syncSuper();
+  }
+
+  function addPerson() {
+    var list = $('#people');
+    var i = $$('[data-person-card]', list).length + 1;
+    list.insertAdjacentHTML('beforeend', personBlock(i));
+    renumberPeople();
+    return list.lastElementChild;
+  }
+
+  function assetGroupDef(key) {
+    return ASSETS_LEFT.concat(ASSETS_RIGHT).filter(function (g) { return g.repeat === key; })[0];
+  }
+
+  function renumberAssets(key) {
+    var g = assetGroupDef(key);
+    var rows = $$('[data-asset-row="' + key + '"]');
+    rows.forEach(function (row, idx) {
+      var i = idx + 1;
+      var was = row.getAttribute('data-asset-index');
+      if (was !== String(i)) {
+        renameFields(row, g.main(was), g.main(i));
+        renameFields(row, g.sec(was), g.sec(i));
+        row.setAttribute('data-asset-index', i);
+      }
+      row.querySelector('label').textContent = g.label.replace('%n', i);
+      $('[data-remove="asset"]', row).style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+    });
+  }
+
+  function addAsset(key) {
+    var box = $('[data-asset-group="' + key + '"]');
+    var i = $$('[data-asset-row="' + key + '"]', box).length + 1;
+    box.insertAdjacentHTML('beforeend', assetRow(assetGroupDef(key), i));
+    renumberAssets(key);
+  }
+
+  /* Superannuation follows the people on the application, one row each. */
+  function syncSuper() {
+    var box = $('#super-rows');
+    if (!box) { return; }
+    var people = $$('[data-person-card]');
+    var rows = $$('[data-super-row]', box);
+    while (rows.length < people.length) {
+      var i = rows.length + 1;
+      box.insertAdjacentHTML('beforeend',
+        '<div class="pair-row" data-super-row data-super-index="' + i + '">' +
+          '<label for="superannuation_' + i + '"></label>' +
+          fieldControl('superannuation_' + i, 'money') +
+          '<span></span><span></span>' +
+        '</div>');
+      rows = $$('[data-super-row]', box);
+    }
+    while (rows.length > people.length) { rows.pop().remove(); }
+
+    rows.forEach(function (row, idx) {
+      var i = idx + 1;
+      var name = [val('a' + i + '_given_names'), val('a' + i + '_surname')].filter(Boolean).join(' ');
+      row.querySelector('label').textContent = 'Superannuation (' + (name || 'Person ' + i) + ')';
+    });
+  }
+
+  function val(name) {
+    var el = document.querySelector('[name="' + cssEscape(name) + '"]');
+    return el ? el.value : '';
+  }
+
   function counts() {
     return {
+      people: $$('[data-person-card]').length,
+      motor_vehicle: $$('[data-asset-row="motor_vehicle"]').length,
+      savings: $$('[data-asset-row="savings"]').length,
+      credit_card: $$('[data-asset-row="credit_card"]').length,
+      car_loan: $$('[data-asset-row="car_loan"]').length,
       properties: $$('[data-property-row]').length,
       emp1: $$('[data-emp-list="1"] [data-emp-card]').length,
       emp2: $$('[data-emp-list="2"] [data-emp-card]').length,
-      investments: $$('[data-inv-row]').length
+      investments: $$('[data-inv-row]').length,
+      generalOthers: $$('[data-other-row="general"]').length,
+      additionalOthers: $$('[data-other-row="additional"]').length
     };
   }
 
@@ -639,6 +856,20 @@
         current--;
       }
     }
+    // never fewer than the two the rest of the form is keyed to
+    var peopleTarget = Math.max(2, c.people || 2);
+    var people = counts().people;
+    while (people < peopleTarget) { addPerson(); people++; }
+    while (people > peopleTarget) { $$('[data-person-card]').pop().remove(); people--; }
+
+    ['motor_vehicle', 'savings', 'credit_card', 'car_loan'].forEach(function (k) {
+      var target = Math.max(1, c[k] || 1);
+      var cur = $$('[data-asset-row="' + k + '"]').length;
+      while (cur < target) { addAsset(k); cur++; }
+      while (cur > target) { $$('[data-asset-row="' + k + '"]').pop().remove(); cur--; }
+      renumberAssets(k);
+    });
+
     grow(counts().properties, c.properties, addProperty, '[data-property-row]');
     grow(counts().emp1, c.emp1, function () { addEmployment(1); }, '[data-emp-list="1"] [data-emp-card]');
     grow(counts().emp2, c.emp2, function () { addEmployment(2); }, '[data-emp-list="2"] [data-emp-card]');
@@ -649,10 +880,26 @@
     while (cur < invTarget) { addInvestmentExpense(); cur++; }
     while (cur > invTarget) { $$('[data-inv-row]').pop().remove(); cur--; }
 
+    [['general', 'generalOthers'], ['additional', 'additionalOthers']].forEach(function (entry) {
+      var group = entry[0], key = entry[1];
+      var target = Math.max(1, c[key] || 1);
+      var otherCount = $$('[data-other-row="' + group + '"]').length;
+      while (otherCount < target) { addOtherExpense(group); otherCount++; }
+      while (otherCount > target) {
+        $$('[data-other-row="' + group + '"]').pop().remove();
+        otherCount--;
+      }
+      renumberOtherExpenses(group);
+    });
+
+    renumberPeople();
+    syncSuper();
     renumberProperties();
     renumberEmployment(1);
     renumberEmployment(2);
     renumberInvestments();
+    renumberOtherExpenses('general');
+    renumberOtherExpenses('additional');
   }
 
   /* ------------------------------------------------------------------ */
@@ -696,23 +943,32 @@
     $$('#loan-form [name]').forEach(function (el) {
       if (el.type === 'checkbox') { el.checked = false; } else if (!el.readOnly) { el.value = ''; }
     });
+    // Build the correct number of age boxes before restoring their values.
+    Object.keys(data.fields || {}).forEach(function (name) {
+      if (!/dependents_number$/.test(name)) { return; }
+      var numberInput = document.querySelector('#loan-form [name="' + cssEscape(name) + '"]');
+      if (numberInput) { numberInput.value = data.fields[name]; }
+    });
+    syncAllDependentAges();
     Object.keys(data.fields || {}).forEach(function (name) {
       var el = document.querySelector('#loan-form [name="' + cssEscape(name) + '"]');
       if (!el) { return; }
       if (el.type === 'checkbox') { el.checked = !!data.fields[name]; } else { el.value = data.fields[name]; }
     });
     [1, 2].forEach(function (n) { sortEmployment(n); renumberEmployment(n); });
-    recalc();
+    growAll();
   }
 
   function clearForm() {
     $('#loan-form').reset();
-    setCounts({ properties: 3, emp1: 1, emp2: 1, investments: 2 });
+    setCounts({ people: 2, properties: 3, emp1: 1, emp2: 1, investments: 2,
+                motor_vehicle: 1, savings: 1, credit_card: 1, car_loan: 1,
+                generalOthers: 1, additionalOthers: 1 });
     $$('#loan-form [name]').forEach(function (el) {
       if (el.type === 'checkbox') { el.checked = false; } else { el.value = ''; }
     });
+    syncAllDependentAges();
     [1, 2].forEach(function (n) { renumberEmployment(n); });
-    recalc();
   }
 
   /* ------------------------------------------------------------------ */
@@ -751,7 +1007,6 @@
 
   function build() {
     [1, 2].forEach(function (n) {
-      $('[data-personal="' + n + '"]').innerHTML = personalBlock(n);
       $('[data-employment="' + n + '"]').innerHTML = employmentSection(n);
       $('[data-income="' + n + '"]').innerHTML = incomeSection(n);
     });
@@ -762,6 +1017,9 @@
     $('#expenses-general').innerHTML =
       '<div class="subhead">General</div>' +
       GENERAL_EXPENSES.map(function (e) { return expenseRow(e[0], e[1], 'general', false); }).join('') +
+      '<div id="general-other-expenses"></div>' +
+      '<div class="add-row no-print"><button type="button" class="btn" id="btn-add-general-other">' +
+      '+ Add other expense</button></div>' +
       totalRow('general_total', 'Total');
 
     $('#expenses-additional').innerHTML =
@@ -771,9 +1029,14 @@
       '<div class="add-row no-print"><button type="button" class="btn" id="btn-add-investment">' +
       '+ Add investment property</button></div>' +
       ADDITIONAL_EXPENSES_BOTTOM.map(function (e) { return expenseRow(e[0], e[1], 'additional', false); }).join('') +
+      '<div id="additional-other-expenses"></div>' +
+      '<div class="add-row no-print"><button type="button" class="btn" id="btn-add-additional-other">' +
+      '+ Add other expense</button></div>' +
       totalRow('additional_total', 'Total');
 
-    setCounts({ properties: 3, emp1: 1, emp2: 1, investments: 2 });
+    setCounts({ people: 2, properties: 3, emp1: 1, emp2: 1, investments: 2,
+                motor_vehicle: 1, savings: 1, credit_card: 1, car_loan: 1,
+                generalOthers: 1, additionalOthers: 1 });
   }
 
   /* ------------------------------------------------------------------ */
@@ -784,7 +1047,11 @@
     var form = $('#loan-form');
 
     form.addEventListener('input', function (e) {
-      if (e.target.classList.contains('amount')) { recalc(); }
+      if (e.target.tagName === 'TEXTAREA') { autoGrow(e.target); }
+      if (e.target.classList.contains('dependents-number')) { syncDependentAges(e.target); }
+
+      // Superannuation rows are labelled with the person they belong to.
+      if (/^a\d+_(given_names|surname)$/.test(e.target.name || '')) { syncSuper(); }
 
       // Keep each income line labelled with the job it belongs to.
       if (/(job_title|employer_name)$/.test(e.target.name || '')) {
@@ -797,7 +1064,6 @@
       if (e.target.classList && e.target.classList.contains('amount') && e.target.value) {
         var n = num(e.target.value);
         e.target.value = n ? fmt(n) : e.target.value;
-        recalc();
       }
     }, true);
 
@@ -820,10 +1086,15 @@
         if (other) { other.checked = false; }
         return;
       }
-      if (!group || !el.checked) { return; }
+      var employmentCard = el.closest('[data-emp-card]');
+      if (!group || !el.checked) {
+        if (employmentCard && /_status_/.test(el.name || '')) { syncSelfEmployed(employmentCard); }
+        return;
+      }
       $$('[data-excl="' + cssEscape(group) + '"]', form).forEach(function (sib) {
         if (sib !== el) { sib.checked = false; }
       });
+      if (employmentCard && /_status_/.test(el.name || '')) { syncSelfEmployed(employmentCard); }
     });
 
     form.addEventListener('click', function (e) {
@@ -845,46 +1116,57 @@
         if (incomeRows[pos]) { incomeRows[pos].remove(); }
         card.remove();
         renumberEmployment(n);
+      } else if (kind === 'asset') {
+        var row = btn.closest('[data-asset-row]');
+        var key = row.getAttribute('data-asset-row');
+        row.remove();
+        renumberAssets(key);
+      } else if (kind === 'person') {
+        btn.closest('[data-person-card]').remove();
+        renumberPeople();
       } else if (kind === 'property') {
         btn.closest('tr').remove();
         renumberProperties();
       } else if (kind === 'inv') {
         btn.closest('[data-inv-row]').remove();
         renumberInvestments();
-        recalc();
+      } else if (kind === 'other') {
+        var group = btn.getAttribute('data-other-group');
+        btn.closest('[data-other-row]').remove();
+        renumberOtherExpenses(group);
       }
     });
 
+    $('#btn-add-person').addEventListener('click', addPerson);
+
+    form.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-add-asset]');
+      if (b) { addAsset(b.getAttribute('data-add-asset')); }
+    });
     $('#btn-add-property').addEventListener('click', addProperty);
     $('#btn-add-investment').addEventListener('click', addInvestmentExpense);
+    $('#btn-add-general-other').addEventListener('click', function () { addOtherExpense('general'); });
+    $('#btn-add-additional-other').addEventListener('click', function () { addOtherExpense('additional'); });
 
     $('#btn-fillable').addEventListener('click', function () {
       var btn = this;
       var name = applicantName(collect().fields);
-      btn.disabled = true;
       var label = btn.textContent;
+      growAll();
+      btn.disabled = true;
       btn.textContent = 'Building…';
       say('Building PDF…');
-      window.AyersPdf.download('Ayers Loan Application' + (name ? ' - ' + fileSafe(name) : '') + '.pdf')
-        .finally(function () { btn.textContent = label; })
-        .then(function (overflow) {
-          btn.disabled = false;
-          if (overflow && overflow.length) {
-            window.alert('PDF downloaded.\n\nThe Ayers form has room for 5 properties, one current and ' +
-              'one previous job per applicant, and 4 investment property expense lines. These did not ' +
-              'fit and are not in the PDF:\n\n  • ' + overflow.join('\n  • ') +
-              '\n\nPrint the page itself (⌘P) if you need a record showing everything.');
-            say('PDF downloaded — some entries did not fit');
-          } else {
-            say('PDF downloaded');
-          }
-        })
+      window.AyersPdf.download('Ayers Loan Application' +
+        (name ? ' - ' + fileSafe(name) : '') + '.pdf')
+        .then(function () { say('PDF downloaded'); })
         .catch(function (err) {
-          btn.disabled = false;
-          window.alert('Could not build the PDF.\n\n' + err.message +
-            '\n\nThis needs the page to be served over http:// — start it with "Start Ayers Form.command" ' +
-            'rather than double-clicking index.html.');
+          console.error('PDF generation failed:', err);
+          window.alert('Could not build the PDF.\n\n' + err.message);
           say('PDF failed');
+        })
+        .finally(function () {
+          btn.disabled = false;
+          btn.textContent = label;
         });
     });
 
@@ -922,5 +1204,5 @@
   wire();
   setupPrinting();
   restore();
-  recalc();
+  growAll();
 })();

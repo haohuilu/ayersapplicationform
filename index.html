@@ -8,14 +8,14 @@
 <!-- ?v= is a cache buster. Browsers hold on to styles.css and app.js hard;
      without it an edit can look like it did nothing and the form prints with
      the old layout. Bump this number whenever styles.css or app.js changes. -->
-<link rel="stylesheet" href="styles.css?v=20">
+<link rel="stylesheet" href="styles.css?v=56">
 </head>
 <body>
 
 <form id="loan-form" autocomplete="on" novalidate>
 
-<!-- ============================================================ PAGE 1 -->
-<section class="sheet" id="page-1">
+<!-- One continuous form. It is paginated only when printed or exported. -->
+<section class="sheet" id="form-sheet">
 
   <div class="masthead">
     <img class="logo" src="assets/ayers-logo.svg" alt="Ayers">
@@ -82,25 +82,13 @@
     <input type="text" id="security_address" name="security_address">
   </div>
 
-  <!-- ---------- Personal details ---------- -->
-  <div class="cols bars section-gap">
-    <h2 class="bar">Personal Details &ndash; Applicant 1</h2>
-    <h2 class="bar">Personal Details &ndash; Applicant 2</h2>
-  </div>
-  <div class="cols">
-    <div class="col-stack" data-personal="1"></div>
-    <div class="col-stack" data-personal="2"></div>
+  <!-- ---------- Personal details (repeatable) ---------- -->
+  <div class="people section-gap" id="people"></div>
+  <div class="add-row no-print">
+    <button type="button" class="btn" id="btn-add-person">+ Add person</button>
   </div>
 
-  <div class="sheet-footer">
-    <span>Confidential</span>
-    <span class="mid">AYERS Loan Application<br>version 3</span>
-    <span>Loan Purpose &amp; Personal Details</span>
-  </div>
-</section>
 
-<!-- ============================================================ PAGE 2 -->
-<section class="sheet" id="page-2">
 
   <div class="cols bars">
     <h2 class="bar">Employment Details &ndash; Applicant 1</h2>
@@ -122,15 +110,17 @@
     <table class="grid" id="property-table">
       <thead>
         <tr>
-          <th style="width:22%">Address of the Property</th>
-          <th style="width:8%">Interest Rate (%)</th>
-          <th style="width:9%">Repayment Type</th>
-          <th style="width:12%">Estimated Market Value</th>
-          <th style="width:11%">Loan Limit</th>
-          <th style="width:9%">Bank</th>
-          <th style="width:10%">Monthly Repayment</th>
-          <th style="width:9%">Weekly Rental</th>
-          <th style="width:8%">Owner (%)</th>
+          <th style="width:18%">Address of the Property</th>
+          <th style="width:7%">Interest Rate (%)</th>
+          <th style="width:8%">Repayment Type</th>
+          <th style="width:8%">Remaining Loan Term</th>
+          <th style="width:11%">Estimated Market Value</th>
+          <th style="width:10%">Loan Limit</th>
+          <th style="width:8%">Bank</th>
+          <th style="width:9%">Monthly Repayment</th>
+          <th style="width:8%">Weekly Rental</th>
+          <th style="width:7%">Owner (%)</th>
+          <th style="width:6%" class="tick-col">To Be Refinanced</th>
           <th class="row-tools no-print"><span class="sr-only">Remove</span></th>
         </tr>
       </thead>
@@ -160,26 +150,9 @@
     <textarea id="significant_change_detail" name="significant_change_detail"></textarea>
   </div>
 
-  <div class="sheet-footer">
-    <span>Confidential</span>
-    <span class="mid">AYERS Loan Application<br>version 3</span>
-    <span>Employment, Income, Assets &amp; Liabilities</span>
-  </div>
-</section>
 
-<!-- ============================================================ PAGE 3 -->
-<section class="sheet" id="page-3">
 
-  <img class="logo decl-logo" src="assets/ayers-logo.svg" alt="Ayers">
-
-  <h1 class="doc-title">Living Expense Declaration</h1>
-  <p class="decl-note">This declaration is to be completed and signed by all intended applicants of this loan.</p>
-
-  <div class="broker-line" style="grid-template-columns:120px 1fr; margin-bottom:12px">
-    <label for="declaration_names">Applicant Name(s)</label>
-    <input type="text" id="declaration_names" name="declaration_names">
-  </div>
-
+  <h1 class="doc-title section-break">Living Expense Declaration</h1>
   <p class="decl-confirm">
     I/We confirm that the below details are a true and accurate breakdown of our combined Basic and Additional Living
     Expenses:
@@ -194,17 +167,17 @@
 
   <div class="grand-total">
     <span class="field-label">Total Living Expenses</span>
-    <div class="money"><span>$</span><input type="text" id="total_living_expenses" name="total_living_expenses" readonly></div>
+    <div class="money"><span>$</span><input type="text" id="total_living_expenses" name="total_living_expenses"></div>
   </div>
 
   <div class="sheet-footer">
     <span>Confidential</span>
-    <span class="mid">AYERS Loan Application<br>version 3</span>
-    <span>Living Expense Declaration</span>
+    <span class="mid">AYERS Loan Application<br>version 2026.1</span>
+    <span>Loan Application</span>
   </div>
 </section>
 
-<!-- End of the form: produce the completed PDF. -->
+<!-- End of the form: build and download a completed PDF from the web layout. -->
 <div class="finish no-print">
   <button type="button" class="btn solid btn-complete" id="btn-fillable">Complete Form</button>
 </div>
@@ -212,8 +185,7 @@
 </form>
 
 <script src="vendor/pdf-lib.min.js"></script>
-<script src="pdf-field-map.js?v=20"></script>
-<script src="pdf-export.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<script src="pdf-export.js?v=57"></script>
+<script src="app.js?v=56"></script>
 </body>
 </html>

@@ -204,7 +204,6 @@ window.AYERS_PDF_MAP = {
  "rent_boarding_weekly": "NA 266",
  "hecs_balance": "NA 27",
  "hecs_monthly": "NA 28",
- "liability_others": "NA 30",
  "declaration_names": "NA 35",
  "primary_residence": "NA 36",
  "phone_internet": "NA 37",
@@ -233,5 +232,8 @@ window.AYERS_PDF_MAP = {
  "loan_amount": "Loan Amount Requested",
  "security_address": "Security Property Address",
  "purpose_purchase": "Purpose Box 1",
- "borrower_entity": "Borrower"
+ "borrower_entity": "Borrower",
+ "a1_emp_status_home_duties": "Home Duties 1",
+ "a2_emp_status_home_duties": "Home Duties 2",
+ "buy_now_pay_later": "NA 30"
 };

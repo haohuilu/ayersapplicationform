@@ -7,7 +7,7 @@
 > Everything typed into the form stays in the browser on the user's own computer; nothing is
 > uploaded anywhere.
 
-A browser version of the printed *Ayers Loan Application (version 3)* PDF. Same layout, colours,
+A browser version of the printed *Ayers Loan Application (version 2026.1)* PDF. Same layout, colours,
 logo and wording, with repeatable **property** and **employment** entries.
 
 ## Running it
@@ -24,12 +24,12 @@ python3 -m http.server 8777 --directory web
 Then open <http://localhost:8777>. Any static host works too — S3, Netlify, an intranet folder —
 just upload the `web` folder as-is.
 
-Opening `web/index.html` directly by double-click mostly works, but **Download** will not: it has to
-read the PDF template, and browsers block that for pages opened from `file://`. Use the launcher.
+Opening `web/index.html` directly by double-click also works. Running the local server is still
+recommended because it matches the hosted setup and avoids browser-specific `file://` restrictions.
 
 ## Editing: bump the cache buster
 
-`index.html` loads `styles.css?v=12` and `app.js?v=12`. **Increment that number whenever you change
+`index.html` loads `styles.css?v=56`, `pdf-export.js?v=57` and `app.js?v=56`. **Increment that number whenever you change
 either file.** Browsers cache both aggressively; without it an edit can appear to do nothing, and —
 worse — the form can still *print* with the old layout even though the screen looks current. This
 has already caused one bad 6-page print of a form that lays out correctly in 3.
@@ -44,14 +44,15 @@ To check a print without guessing, render it headlessly and count the pages:
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Page skeleton: the three sheets, section bars, and the static fields |
+| `index.html` | The form itself: one continuous sheet |
 | `styles.css` | All styling, including the A4 print rules |
-| `app.js` | Field templates, repeatable rows, totals, autosave |
-| `pdf-export.js` | Builds the filled, still-editable PDF |
-| `pdf-field-map.js` | Web field name → field name in the Ayers template (generated) |
+| `app.js` | Field templates, repeatable rows, autosave |
+| `pdf-export.js` | Draws the completed, still-editable PDF from the live page |
 | `assets/ayers-logo.svg` | Logo, extracted as vector from the original PDF |
-| `assets/ayers-form-template.pdf` | The original Ayers PDF, values cleared, used as the fill template |
 | `vendor/pdf-lib.min.js` | PDF library, vendored so nothing loads from the internet |
+
+Unused, kept only because the earlier template approach may be wanted back:
+`pdf-field-map.js` and `assets/ayers-form-template.pdf`. Nothing loads them.
 
 Repeated and per-applicant fields are generated from the lists at the top of `app.js`
 (`GENERAL_EXPENSES`, `ASSETS_LEFT`, `CITIZENSHIP`, …). To add or rename a field, edit the list —
@@ -75,104 +76,81 @@ the markup follows automatically.
   many properties the applicant has.
 - **Income** — was a single Base / Overtime / Commission / Others row per applicant. Now **one income
   line per job**, added and removed automatically with the employment entries and labelled with the
-  job title. Each line totals itself; a *Total Income (all jobs)* line appears once there are two or
-  more jobs. Removing a job removes its income line specifically, so the remaining figures stay with
+  job title. Removing a job removes its income line specifically, so the remaining figures stay with
   their own jobs.
-- **Loan amount** — the PDF never asked how much was being applied for. Added **Loan Amount Requested** under Loan Purpose, alongside *Loan Term (years)* and *Security / Property Address*.
-- **Totals** — income per job and per applicant, the two living-expense subtotals, and total living
-  expenses now calculate automatically and are read-only.
-- **Page footers** name their section instead of "Page 1 of 3", which stops being true once an
-  applicant adds enough jobs or properties to run onto another sheet.
-- Added an "If yes, please provide details" box under the significant-change question, and name/date
-  lines under the declaration.
+- **People** — was two fixed applicant columns. Now *Personal Details 1, 2, 3 …* via
+  **+ Add person**, each marked **Applicant** or **Guarantor**. Superannuation rows follow
+  the people automatically and are labelled with their names.
+- **Assets and liabilities** — motor vehicles, savings, credit cards and car loans start as a
+  single row with a **+** instead of a fixed two or four. *Others (please specify)* became
+  **Buy Now Pay Later** with a Bank/Provider field.
+- **Property table** — gained **Remaining Loan Term** and a **To Be Refinanced** tick. The
+  address cell wraps and grows so a long address stays visible.
+- **Loan amount** — the PDF never asked how much was being applied for. Added **Loan Amount
+  Required**, **Borrower (If Company or Trust)** and **Security / Property Address**.
+- **Employment** — added **Home Duties** to the status options.
+- **Continuous form** — the three paper sheets are one scrolling page; it is paginated only
+  when exported or printed.
+- **Totals** are entered by hand, not calculated. See *Using it* for why.
+- Added an "If yes, please provide details" box under the significant-change question. The
+  paper declaration's signing line and Applicant Name field were dropped — this is a web form.
 
-## Toolbar
+## Using it
 
-```
-[ New ]  │  [ Export data | Import data ]  │  [ Download ]
-```
+The form is one continuous page — it is not split into sheets on screen.
 
-Left to right, in the order an application is worked through: start it, move it between machines,
-then produce the PDF. **New** wipes the form, so it is kept at the opposite end from **Download**
-rather than sitting a slip away from it.
-
-| Button | What it does |
+| Control | What it does |
 | --- | --- |
-| **Download** | Builds the filled-in Ayers PDF and downloads it. Fields stay editable. |
-| **New** | Clears the form to start a fresh application. |
-| **Export data** / **Import data** | Saves/reads the application as a JSON file — for emailing it, backing it up, or continuing on another computer. |
+| **Complete Form** (end of the form) | Builds the completed PDF and downloads it |
+| **Reset** (top of the form) | Clears everything to start a new application |
 
-The form autosaves as you type — the toolbar shows *Autosaved 14:32* so a broker filling this in
-front of a client can see their work is safe. Closing the tab by accident doesn't lose it; reopening
-the page restores where you left off. There is no saved-applications list — **Download** (or **Export data**) is how an
-application is kept.
+It autosaves as you type, so closing the tab by accident does not lose the work;
+reopening the page restores it. Nothing is sent anywhere — there is no server side.
+An application leaves the browser only when you press **Complete Form**.
 
-## Keeping an application
+Totals are typed in by hand. They used to calculate themselves, but the downloaded
+PDF stays editable, so a total that silently disagreed with an amended figure was
+worse than no total at all.
 
-Nothing is sent anywhere — there is no server side. An application leaves the browser only when you
-press **Download** (PDF) or **Export data** (JSON). The autosave is a convenience against an
-accidental tab close, held in this browser on this computer only; it is not a filing system.
+## The PDF
 
-## The PDF output
+**Complete Form** walks the rendered page and redraws it into the PDF as vector —
+real text, rectangles and rules — then places an AcroForm field over every input.
+So the download is the web form itself, and it can still be typed into afterwards
+in Preview, Acrobat or Adobe Reader.
 
-**Download** produces your original Ayers PDF with its 230 form fields filled in and **still
-editable** in Preview, Acrobat or Adobe Reader.
+> Safari's built-in PDF viewer and Quick Look show PDFs **read-only**. Open the
+> downloaded file in Preview or Acrobat to fill it in. That is an Apple limitation
+> and applies to any fillable PDF.
 
-> Safari's built-in PDF viewer and Quick Look display PDFs **read-only** — they show the fields but
-> will not let you type. Open the downloaded file in Preview or Acrobat to fill it in. This is an
-> Apple limitation and applies equally to the original Ayers PDF.
+Three things are worth knowing before editing `pdf-export.js`:
 
-Printing the page itself (⌘P) still works and still paginates onto clean A4 — see *Pagination*
-below. That is the fallback for an application too large for the template (next section), because
-the printed page includes every job and property however many there are. It is flat, though: printed
-output can never contain fillable fields, in any browser.
+- **It measures the on-screen layout**, then scales it with a single factor
+  (A4 content width ÷ sheet content width). One uniform scale is what keeps every
+  font size and gap in the same proportion as the browser shows. An earlier version
+  measured the compacted *print* layout instead, which is why the exported spacing
+  and type did not match the screen.
+- **Page count is not fixed.** The document runs to as many A4 pages as the content
+  needs, breaking between elements so a field or table row is never cut in half.
+- **`VALUE_FONT_PX` caps the size of typed values.** On screen an input is 12px,
+  deliberately larger than its 10.5px label; on paper that contrast reads heavy, so
+  values are drawn at the label size. Raise it to make filled text stand out more.
 
-### How the editable PDF works
+Two traps that produced real bugs, in case they reappear:
 
-A browser can never *print* a fillable PDF — print output is a flat rendering of the page, in every
-browser. So this does not print at all: it loads `assets/ayers-form-template.pdf` (your original
-form with all values cleared), fills its AcroForm fields with pdf-lib, and saves it with the fields
-left editable. `pdf-field-map.js` maps each web field name to its counterpart in the template; it was
-generated from the template's own AcroForm, so names containing carriage returns
-(`Monthly \rRepayment 1`) are exact.
+- Text is positioned from each rendered line's own rectangle, not its element box.
+  Using the element box clipped tick labels (the checkbox painted over the start of
+  the word) and ran `<br>` lines together.
+- Elements hidden by `clip: rect(0,0,0,0)` — the screen-reader-only column labels —
+  must be skipped explicitly. They are not `display: none`, so they were being drawn
+  on top of the visible headings.
 
-Two details are worth preserving if you touch `pdf-export.js`:
+Anything marked `.no-print` is taken out of the flow while measuring, so the
+**+ Add** buttons leave no gap behind.
 
-- **Appearances are left to the viewer** (`NeedAppearances`, with existing streams cleared) rather
-  than drawn by pdf-lib. pdf-lib can only draw in a font it embeds, which loses the form's Gotham
-  and renders smaller; and viewers redraw drop-downs from the field value regardless, so a stale
-  stream left Title / Citizenship / Gender / Marital Status looking blank.
-- **Tick boxes keep their appearance streams.** Those hold the check glyph and its on/off states,
-  which a viewer will not reconstruct.
+## Printing instead
 
-### Capacity
-
-The original template is a fixed layout, so it holds only:
-
-- **5 properties**
-- **one current and one previous job per applicant** — extra jobs are totalled into the single income
-  row rather than lost
-- **4 investment-property expense lines**
-
-Anything beyond that cannot be represented. The app counts it and tells the user exactly what did not
-fit, and says to print the page (⌘P) for a record showing everything. This is the unavoidable tension
-between "keep the original Ayers design" and "allow unlimited jobs and properties".
-
-## Printing to PDF
-
-⌘P prints the page itself — choose *Save as PDF* in the dialog for a flat A4 PDF with selectable
-text and a sharp vector logo. Use this when an application is too big for the editable template.
-
-- The filename is set from the applicant's name automatically —
-  `Ayers Loan Application - Dean Laurence Smith.pdf`.
-- The toolbar, all **+ Add** buttons and every **×** are hidden in the output.
-- Records won't split across a page boundary, and the property table repeats its header if it runs
-  onto a second page.
-- The layout stays two-column at A4. Note the responsive rules are deliberately scoped to
-  `@media screen` — an unqualified `max-width` query also matches the ~794px A4 print width and
-  would collapse the printed form to a single column.
-
-### Pagination
+⌘P still prints the page directly if a flat, non-editable copy is wanted.
 
 A standard application prints as **three A4 pages**, one per section. Adding jobs or properties
 grows the middle section onto further A4 pages rather than distorting the layout:
