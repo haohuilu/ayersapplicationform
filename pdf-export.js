@@ -23,12 +23,44 @@
 
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
-  /* Typed values are capped at this CSS size before scaling to the page.
-     On screen an input is 12px — deliberately larger than its 10.5px label,
-     because that is what you type into. On paper the same contrast reads
-     heavy, so values are brought down to the label size. Raise this if the
-     filled text should stand out more. */
-  var VALUE_FONT_PX = 10.5;
+  /* Use one predictable size for the main form and one for the complete
+     property table. Writing fixed sizes avoids Preview's oversized 12 pt
+     fallback and keeps dropdowns consistent with text inputs. */
+  var SINGLE_LINE_FIELD_HEIGHT = 10.5; // PDF points
+  var TABLE_FIELD_FONT_SIZE = 7; // PDF points; matches the original Ayers PDF
+  var TABLE_FIELD_LINE_HEIGHT = 7.77; // pdf-lib Helvetica multiline leading at 7 pt
+  var NORMAL_FIELD_FONT_SIZE = 8; // PDF points
+  var PROPERTY_ADDRESS_BLOCK_NUDGE = 0.7; // points downward from exact centre
+
+  function isPropertyAddressName(name) {
+    return /^property_\d+_address(?:__\d+)?$/.test(name || '');
+  }
+
+  /* pdf-lib top-aligns every multiline field, even when it contains only one
+     short line. Property addresses therefore looked higher than the centred
+     fields beside them. Keep the field multiline/editable, but centre its
+     generated text block vertically inside the widget appearance. */
+  function centeredPropertyAddressAppearance(textField, widget, font) {
+    var operators = PDFLib.defaultTextFieldAppearanceProvider(textField, widget, font);
+    var matrices = operators.filter(function (operator) {
+      return String(operator.name) === 'Tm' && operator.args && operator.args.length === 6;
+    });
+    if (!matrices.length) { return operators; }
+
+    var ys = matrices.map(function (operator) {
+      var value = operator.args[5];
+      return value.asNumber ? value.asNumber() : parseFloat(String(value));
+    });
+    var textHeight = font.heightAtSize(TABLE_FIELD_FONT_SIZE);
+    var currentMid = (Math.min.apply(Math, ys) + Math.max.apply(Math, ys) + textHeight) / 2;
+    var desiredMid = widget.getRectangle().height / 2 - PROPERTY_ADDRESS_BLOCK_NUDGE;
+    var delta = desiredMid - currentMid;
+
+    matrices.forEach(function (operator, index) {
+      operator.args[5] = PDFLib.PDFNumber.of(ys[index] + delta);
+    });
+    return operators;
+  }
 
   /* ------------------------------------------------------------------ */
   /* Reading the page                                                    */
@@ -121,11 +153,15 @@
       if (tag === 'img') { items.push({ kind: 'logo', box: base }); return; }
 
       if (tag === 'input' || tag === 'select' || tag === 'textarea') {
+        var fieldType = (el.type || '').toLowerCase();
+        var fieldBg = colour(cs.backgroundColor) || { r: 0.867, g: 0.871, b: 0.863 };
+        if (fieldType !== 'checkbox' && fieldType !== 'radio') {
+          items.push({ kind: 'rect', box: base, fill: fieldBg });
+        }
         items.push({ kind: 'field', box: base, el: el, tag: tag,
-                     type: (el.type || '').toLowerCase(),
+                     type: fieldType,
                      padL: parseFloat(cs.paddingLeft) || 0,
-                     fontSize: parseFloat(cs.fontSize) || 12,
-                     bg: colour(cs.backgroundColor) || { r: 0.867, g: 0.871, b: 0.863 },
+                     bg: fieldBg,
                      ink: colour(cs.color) || { r: 0.25, g: 0.25, b: 0.26 } });
         return;
       }
@@ -185,15 +221,81 @@
   }
 
   function wrap(text, font, size, maxWidth) {
+    if (!text) { return ['']; }
     if (font.widthOfTextAtSize(text, size) <= maxWidth) { return [text]; }
     var words = text.split(' '), lines = [], line = '';
+
+    /* A reference number, unit identifier or email-like address may contain
+       no spaces. Split such tokens by character so they cannot disappear
+       beyond the right edge of the editable PDF field. */
+    function pieces(word) {
+      if (font.widthOfTextAtSize(word, size) <= maxWidth) { return [word]; }
+      var result = [], part = '';
+      Array.from(word).forEach(function (character) {
+        var trial = part + character;
+        if (part && font.widthOfTextAtSize(trial, size) > maxWidth) {
+          result.push(part);
+          part = character;
+        } else {
+          part = trial;
+        }
+      });
+      if (part) { result.push(part); }
+      return result;
+    }
+
     words.forEach(function (word) {
-      var trial = line ? line + ' ' + word : word;
-      if (!line || font.widthOfTextAtSize(trial, size) <= maxWidth) { line = trial; }
-      else { lines.push(line); line = word; }
+      pieces(word).forEach(function (piece) {
+        var trial = line ? line + ' ' + piece : piece;
+        if (!line || font.widthOfTextAtSize(trial, size) <= maxWidth) {
+          line = trial;
+        } else {
+          lines.push(line);
+          line = piece;
+        }
+      });
     });
     if (line) { lines.push(line); }
     return lines;
+  }
+
+  /* Browser textareas and PDF Helvetica do not always wrap at exactly the
+     same character. Size each address from the PDF's real font metrics before
+     collecting the page layout, then make every control in that row equally
+     tall. This guarantees that every generated PDF line fits and that all
+     horizontal input rules share the same top and bottom positions. */
+  function fitPropertyRowsForPdf(font, usableWidth) {
+    $$('#property-table [data-property-row]').forEach(function (row) {
+      var address = row.querySelector('textarea');
+      if (!address) { return; }
+
+      var sheet = address.closest('.sheet');
+      var sheetBox = sheet.getBoundingClientRect();
+      var sheetStyle = getComputedStyle(sheet);
+      var contentWidth = sheetBox.width - (parseFloat(sheetStyle.paddingLeft) || 0) -
+        (parseFloat(sheetStyle.paddingRight) || 0);
+      var scale = usableWidth / contentWidth;
+      var addressStyle = getComputedStyle(address);
+      var inset = (parseFloat(addressStyle.paddingLeft) || 0) * scale;
+      var pdfWidth = Math.max(20, address.getBoundingClientRect().width * scale - inset - 6);
+      var value = safeText(address.value || '').replace(/\s+/g, ' ').trim();
+      var lineCount = value ? wrap(value, font, TABLE_FIELD_FONT_SIZE, pdfWidth).length : 1;
+      var textHeight = font.heightAtSize(TABLE_FIELD_FONT_SIZE);
+
+      /* 3 pt is removed by addField's vertical inset; another 3 pt gives the
+         first and last glyphs safe clearance in Preview and Acrobat. */
+      var requiredPdfHeight = textHeight + (lineCount - 1) * TABLE_FIELD_LINE_HEIGHT + 6;
+      /* Never shrink below the browser's own complete content height either;
+         the larger of the browser and PDF calculations is the safe answer. */
+      var requiredCssHeight = Math.max(50, address.scrollHeight,
+        Math.ceil(requiredPdfHeight / scale));
+
+      address.style.height = requiredCssHeight + 'px';
+      $$('input[type="text"], select, .tick', row).forEach(function (control) {
+        control.style.height = requiredCssHeight + 'px';
+      });
+    });
+    void document.body.offsetHeight;
   }
 
   /* The standard PDF fonts are WinAnsi, so swap the typographic characters
@@ -274,7 +376,18 @@
     var inset = it.padL * ctx.scale;
     var x = place.x + inset;
     var width = Math.max(6, place.width - inset - 1);
-    var size = Math.max(4.5, Math.min(it.fontSize, VALUE_FONT_PX) * ctx.scale);
+    var multiline = it.tag === 'textarea';
+    var inPropertyTable = it.el.closest && it.el.closest('#property-table');
+    var fieldY = place.y;
+    var fieldHeight = place.height;
+    if (multiline || inPropertyTable) {
+      var verticalInset = Math.min(1.5, place.height * 0.08);
+      fieldY += verticalInset;
+      fieldHeight = Math.max(6, place.height - verticalInset * 2);
+    } else {
+      fieldHeight = Math.min(place.height, SINGLE_LINE_FIELD_HEIGHT);
+      fieldY += (place.height - fieldHeight) / 2;
+    }
 
     var field;
     if (it.tag === 'select') {
@@ -282,18 +395,30 @@
       var opts = Array.prototype.map.call(it.el.options, function (o) { return safeText(o.value); })
         .filter(function (v, i, a) { return v && a.indexOf(v) === i; });
       if (opts.length) { field.addOptions(opts); }
-      if (it.el.value) { try { field.select(safeText(it.el.value)); } catch (e) { /* not an option */ } }
+      if (it.el.value) {
+        try { field.select(safeText(it.el.value)); } catch (e) { /* not an option */ }
+      }
     } else {
       field = ctx.form.createTextField(name);
-      if (it.tag === 'textarea') { field.enableMultiline(); }
-      field.setText(safeText(it.el.value || ''));
+      if (multiline) { field.enableMultiline(); }
+      var value = safeText(it.el.value || '');
+      /* Normalize the address and insert compact line breaks using the
+         requested address font size. */
+      if (isPropertyAddressName(name)) {
+        value = value.replace(/\s+/g, ' ').trim();
+        value = wrap(value, ctx.font, TABLE_FIELD_FONT_SIZE,
+          Math.max(20, width - 5)).join('\n');
+      }
+      field.setText(value);
     }
 
     field.addToPage(page, {
-      x: x, y: place.y, width: width, height: place.height,
+      x: x, y: fieldY, width: width, height: fieldHeight,
       borderWidth: 0, backgroundColor: rgb(grey), textColor: rgb(ink), font: ctx.font
     });
-    field.setFontSize(size);
+    var fixedSize = inPropertyTable ? TABLE_FIELD_FONT_SIZE : NORMAL_FIELD_FONT_SIZE;
+    ctx.fieldFontSizes[name] = fixedSize;
+    field.setFontSize(fixedSize);
     if (it.el.readOnly && field.enableReadOnly) { field.enableReadOnly(); }
   }
 
@@ -339,6 +464,7 @@
       font: await pdf.embedFont(PDFLib.StandardFonts.Helvetica),
       bold: await pdf.embedFont(PDFLib.StandardFonts.HelveticaBold),
       used: Object.create(null),
+      fieldFontSizes: Object.create(null),
       pageTopPt: A4_H - MARGIN_TOP
     };
     pdf.setTitle(document.title || 'Ayers Loan Application');
@@ -366,6 +492,7 @@
     void document.body.offsetHeight;
     var sheetData;
     try {
+      fitPropertyRowsForPdf(ctx.font, usableW);
       sheetData = $$('.sheet').map(function (sheet) { return collect(sheet); });
     } finally {
       hide.remove();
@@ -395,6 +522,26 @@
     }
 
     ctx.form.updateFieldAppearances(ctx.font);
+    /* Keep each editable field's /DA identical to the size used in its /AP.
+       Preview otherwise rewrites fields to a different size after interaction. */
+    ctx.form.getFields().forEach(function (field) {
+      if (field instanceof PDFLib.PDFTextField || field instanceof PDFLib.PDFDropdown ||
+          field instanceof PDFLib.PDFOptionList) {
+        if (field instanceof PDFLib.PDFTextField && isPropertyAddressName(field.getName())) {
+          field.updateAppearances(ctx.font, centeredPropertyAddressAppearance);
+        }
+        var fixedSize = ctx.fieldFontSizes[field.getName()] || 0;
+        field.setFontSize(fixedSize);
+        /* pdf-lib keeps /DA on the parent field, but macOS Preview reads the
+           widget's own /DA when it rewrites a form. Without this copy Preview
+           discards the requested size and falls back to Helvetica 12. The
+           original Ayers PDF stores /DA on both objects. */
+        var appearance = field.acroField.getDefaultAppearance();
+        field.acroField.getWidgets().forEach(function (widget) {
+          widget.setDefaultAppearance(appearance);
+        });
+      }
+    });
     return {
       bytes: await pdf.save({ updateFieldAppearances: false }),
       pages: pageCount,

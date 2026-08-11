@@ -29,7 +29,7 @@ recommended because it matches the hosted setup and avoids browser-specific `fil
 
 ## Editing: bump the cache buster
 
-`index.html` loads `styles.css?v=56`, `pdf-export.js?v=57` and `app.js?v=56`. **Increment that number whenever you change
+`index.html` loads `styles.css?v=69`, `pdf-export.js?v=76` and `app.js?v=59`. **Increment that number whenever you change
 either file.** Browsers cache both aggressively; without it an edit can appear to do nothing, and —
 worse — the form can still *print* with the old layout even though the screen looks current. This
 has already caused one bad 6-page print of a form that lays out correctly in 3.
@@ -132,9 +132,17 @@ Three things are worth knowing before editing `pdf-export.js`:
   and type did not match the screen.
 - **Page count is not fixed.** The document runs to as many A4 pages as the content
   needs, breaking between elements so a field or table row is never cut in half.
-- **`VALUE_FONT_PX` caps the size of typed values.** On screen an input is 12px,
-  deliberately larger than its 10.5px label; on paper that contrast reads heavy, so
-  values are drawn at the label size. Raise it to make filled text stand out more.
+- **Editable values use fixed, viewer-safe sizes.** Single-line widgets are vertically constrained
+  to keep ordinary entries clear and consistent. Property addresses use the property-table
+  size of 7 pt in a compact 23%-wide table cell. Repeated whitespace is normalized and
+  controlled line breaks are calculated at that size. The sizes
+  are preserved when fields are edited in PDF software that respects the field font setting.
+- **Dropdowns remain dropdowns in the PDF.** Their option lists are copied from the web
+  form. Every main-form input and dropdown uses 8 pt. Every property-table field,
+  including its address and dropdown, uses 7 pt. The same size is written to both the
+  parent field and each widget. Preview reads the widget
+  value when it resaves a form; without that second
+  `/DA` it substitutes Helvetica 12 pt.
 
 Two traps that produced real bugs, in case they reappear:
 

@@ -272,7 +272,7 @@ select {
 /* label | value | label | value rows (assets & liabilities) */
 .pair-row {
   display: grid;
-  grid-template-columns: 1.25fr 1fr 0.55fr 1fr;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 0.55fr) minmax(0, 1fr);
   align-items: center;
   gap: 0 8px;
   margin-bottom: 6px;
@@ -285,8 +285,14 @@ select {
 .btn-sm { height: 22px; padding: 0 11px; font-size: 9.5px; }
 .add-row .btn-sm { margin: 1px 0 7px; }
 
-.pair-row > label { font-size: 11.5px; color: var(--ink); }
-.pair-row > label.sec { text-align: left; color: var(--label); font-size: 10.5px; }
+.pair-row > label { min-width: 0; font-size: 11.5px; color: var(--ink); }
+.pair-row > label.sec {
+  min-width: 0;
+  text-align: left;
+  color: var(--label);
+  font-size: 10.5px;
+  line-height: 1.15;
+}
 
 /* Income: one line per job. `display: contents` lets each line's cells sit in
    the parent grid, so lines can be added or removed without disturbing the
@@ -404,26 +410,34 @@ table.grid th {
 table.grid td {
   border: 1px solid var(--rule);
   padding: 0;
-  height: 36px;
+  height: 52px;
+  vertical-align: middle;
 }
 
 table.grid td input,
 table.grid td select {
+  display: block;
   background: transparent;
-  height: 34px;
-  font-size: 11px;
+  height: 50px;
+  font-size: 7pt;
   padding: 3px 5px;
 }
 
-/* The address wraps instead of scrolling out of sight in a narrow column. */
+/* Give a two-line address comfortable top/bottom clearance. autoGrow() adds
+   more height when a longer address needs three or more lines, which also
+   grows the complete table row so no address text is clipped. */
 table.grid td textarea {
+  display: block;
   background: transparent;
-  height: 34px;
-  font-size: 10.5px;
+  height: 50px;
+  min-height: 50px;
+  font-size: 7pt;
   line-height: 1.25;
   padding: 3px 5px;
   resize: none;
   overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 table.grid td.num input { text-align: left; }
@@ -435,7 +449,7 @@ table.grid tbody tr:nth-child(even) td { background: #fafafa; }
    stretches a checkbox into a tall rectangle — so it has to be overridden
    here to keep the box square. */
 table.grid td.tick-cell { text-align: center; vertical-align: middle; }
-table.grid td.tick-cell .tick { justify-content: center; padding: 0; height: 28px; }
+table.grid td.tick-cell .tick { justify-content: center; padding: 0; height: 50px; }
 table.grid td.tick-cell input[type="checkbox"] {
   width: 12px;
   height: 12px;
@@ -773,9 +787,9 @@ input[readonly] {
   .sheet-footer { margin-top: 8px; padding-top: 4px; font-size: 7px; }
   .sheet-footer .mid { line-height: 1.35; }
   .money > span { top: 1px; font-size: 10px; }
-  table.grid td { height: 28px; }
+  table.grid td { height: 42px; }
   table.grid td input[type="text"], table.grid td select,
-  table.grid td textarea { height: 26px; font-size: 9.5px; }
+  table.grid td textarea { height: 40px; min-height: 40px; font-size: 7pt; }
   table.grid td.tick-cell input[type="checkbox"] { width: 10px; height: 10px; min-width: 10px; }
   /* Margins belong to @page, not the sheet: sheet padding is applied once at
      the top of the box, so a section that runs onto a second sheet of paper

@@ -87,7 +87,7 @@
       secLabel: 'Per Month', sec: function (i) { return 'car_loan_' + i + '_monthly'; }, secType: 'money' },
     ['rent_boarding_fee', 'Rent/Boarding Fee', 'money', 'rent_boarding_weekly', 'Per Week', 'money'],
     ['hecs_balance', 'HECS Balance', 'money', 'hecs_monthly', 'Per Month', 'money'],
-    ['buy_now_pay_later', 'Buy Now Pay Later', 'money', 'buy_now_pay_later_provider', 'Bank/Provider', 'text']
+    ['buy_now_pay_later', 'Buy Now Pay Later', 'money', 'buy_now_pay_later_provider', 'Bank/<br>Provider', 'text']
   ];
 
   /* ------------------------------------------------------------------ */
@@ -454,7 +454,7 @@
     return '<tr data-property-row>' +
       // a textarea, not an input: the column is narrow and a long address
       // would otherwise scroll out of sight as it is typed
-      '<td><textarea name="' + p + 'address" rows="2" aria-label="Address of the property"></textarea></td>' +
+      '<td><textarea name="' + p + 'address" rows="3" aria-label="Address of the property"></textarea></td>' +
       cell('interest_rate', 'Interest rate') +
       '<td><select name="' + p + 'repayment_type" aria-label="Repayment type">' + opts(REPAYMENT) + '</select></td>' +
       cell('remaining_term', 'Remaining loan term') +
@@ -526,7 +526,18 @@
       el.setAttribute('data-min-height', min);
     }
     el.style.height = 'auto';
-    el.style.height = Math.max(min, el.scrollHeight) + 'px';
+    var height = Math.max(min, el.scrollHeight);
+    el.style.height = height + 'px';
+
+    /* A property address controls the height of its complete table row.
+       Stretch every neighbouring control to exactly the same height so their
+       top and bottom rules stay aligned when the address wraps. */
+    var propertyRow = el.closest('[data-property-row]');
+    if (propertyRow) {
+      $$('input[type="text"], select, .tick', propertyRow).forEach(function (control) {
+        control.style.height = height + 'px';
+      });
+    }
   }
 
   function growAll() { $$('#loan-form textarea').forEach(autoGrow); }
