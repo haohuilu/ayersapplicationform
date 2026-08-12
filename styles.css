@@ -259,12 +259,14 @@ select {
 
 /* address block: stacked lines that read as one grey box */
 .addr-block input { margin-bottom: 2px; }
-.addr-block .with-postcode {
+.addr-block .address-locality {
   display: grid;
-  grid-template-columns: 1fr 150px;
+  grid-template-columns: minmax(0, 1fr) 74px 128px;
   gap: 0 8px;
   align-items: center;
 }
+.addr-block .address-locality > input,
+.addr-block .address-locality > select { margin-bottom: 0; }
 .addr-block .pc-wrap { display: flex; align-items: center; gap: 6px; }
 .addr-block .pc-label { font-size: 10.5px; color: var(--label); white-space: nowrap; }
 .addr-block .pc-wrap input { margin-bottom: 0; }
@@ -744,7 +746,10 @@ input[readonly] {
   .loan-row { grid-template-columns: 1fr 1fr; gap: 0 10px; }
   .pair-row { grid-template-columns: 1fr 1fr; }
   .pair-row > label.sec { text-align: left; }
-  .addr-block .with-postcode { grid-template-columns: 1fr; gap: 2px; }
+  .addr-block .address-locality {
+    grid-template-columns: minmax(0, 1fr) 76px minmax(105px, .75fr);
+    gap: 2px 6px;
+  }
   .row.r-3 { grid-template-columns: 1fr; }
 }
 

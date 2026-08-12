@@ -20,6 +20,7 @@
   var GENDER = ['Male', 'Female'];
   var MARITAL = ['Single', 'De Facto', 'Married', 'Separated', 'Divorced', 'Widowed'];
   var REPAYMENT = ['P&I', 'IO'];
+  var AUSTRALIAN_STATES = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
   var RESIDENTIAL_STATUS = [
     ['home_with_mortgage', 'Home with Mortgage'],
     ['own_home', 'Own Home'],
@@ -140,8 +141,10 @@
       '<span class="field-label">' + label + '</span>' +
       '<input type="text" name="' + prefix + '_line1" aria-label="' + label + ' line 1">' +
       '<input type="text" name="' + prefix + '_line2" aria-label="' + label + ' line 2">' +
-      '<div class="with-postcode">' +
-        '<input type="text" name="' + prefix + '_suburb" aria-label="Suburb / State" placeholder="Suburb, State">' +
+      '<div class="address-locality">' +
+        '<input type="text" name="' + prefix + '_suburb" aria-label="Suburb" placeholder="Suburb">' +
+        '<select name="' + prefix + '_state" aria-label="Australian state or territory">' +
+          opts(AUSTRALIAN_STATES, 'State') + '</select>' +
         '<div class="pc-wrap"><span class="pc-label">Postcode</span>' +
         '<input type="text" name="' + prefix + '_postcode" aria-label="Postcode"></div>' +
       '</div>' +
@@ -851,8 +854,7 @@
       emp1: $$('[data-emp-list="1"] [data-emp-card]').length,
       emp2: $$('[data-emp-list="2"] [data-emp-card]').length,
       investments: $$('[data-inv-row]').length,
-      generalOthers: $$('[data-other-row="general"]').length,
-      additionalOthers: $$('[data-other-row="additional"]').length
+      generalOthers: $$('[data-other-row="general"]').length
     };
   }
 
@@ -891,7 +893,7 @@
     while (cur < invTarget) { addInvestmentExpense(); cur++; }
     while (cur > invTarget) { $$('[data-inv-row]').pop().remove(); cur--; }
 
-    [['general', 'generalOthers'], ['additional', 'additionalOthers']].forEach(function (entry) {
+    [['general', 'generalOthers']].forEach(function (entry) {
       var group = entry[0], key = entry[1];
       var target = Math.max(1, c[key] || 1);
       var otherCount = $$('[data-other-row="' + group + '"]').length;
@@ -950,6 +952,18 @@
 
   function apply(data) {
     if (!data) { return; }
+    /* Migrate drafts saved before State became its own dropdown. Values such
+       as "Kellyville NSW" are split without losing the suburb text. */
+    Object.keys(data.fields || {}).forEach(function (name) {
+      if (!/_suburb$/.test(name) || !data.fields[name]) { return; }
+      var stateName = name.replace(/_suburb$/, '_state');
+      if (data.fields[stateName]) { return; }
+      var match = String(data.fields[name]).trim().match(/^(.*?)\s+(ACT|NSW|NT|QLD|SA|TAS|VIC|WA)$/i);
+      if (match) {
+        data.fields[name] = match[1];
+        data.fields[stateName] = match[2].toUpperCase();
+      }
+    });
     setCounts(data.counts);
     $$('#loan-form [name]').forEach(function (el) {
       if (el.type === 'checkbox') { el.checked = false; } else if (!el.readOnly) { el.value = ''; }
@@ -974,7 +988,7 @@
     $('#loan-form').reset();
     setCounts({ people: 2, properties: 3, emp1: 1, emp2: 1, investments: 2,
                 motor_vehicle: 1, savings: 1, credit_card: 1, car_loan: 1,
-                generalOthers: 1, additionalOthers: 1 });
+                generalOthers: 1 });
     $$('#loan-form [name]').forEach(function (el) {
       if (el.type === 'checkbox') { el.checked = false; } else { el.value = ''; }
     });
@@ -1040,14 +1054,11 @@
       '<div class="add-row no-print"><button type="button" class="btn" id="btn-add-investment">' +
       '+ Add investment property</button></div>' +
       ADDITIONAL_EXPENSES_BOTTOM.map(function (e) { return expenseRow(e[0], e[1], 'additional', false); }).join('') +
-      '<div id="additional-other-expenses"></div>' +
-      '<div class="add-row no-print"><button type="button" class="btn" id="btn-add-additional-other">' +
-      '+ Add other expense</button></div>' +
       totalRow('additional_total', 'Total');
 
     setCounts({ people: 2, properties: 3, emp1: 1, emp2: 1, investments: 2,
                 motor_vehicle: 1, savings: 1, credit_card: 1, car_loan: 1,
-                generalOthers: 1, additionalOthers: 1 });
+                generalOthers: 1 });
   }
 
   /* ------------------------------------------------------------------ */
@@ -1157,7 +1168,6 @@
     $('#btn-add-property').addEventListener('click', addProperty);
     $('#btn-add-investment').addEventListener('click', addInvestmentExpense);
     $('#btn-add-general-other').addEventListener('click', function () { addOtherExpense('general'); });
-    $('#btn-add-additional-other').addEventListener('click', function () { addOtherExpense('additional'); });
 
     $('#btn-fillable').addEventListener('click', function () {
       var btn = this;

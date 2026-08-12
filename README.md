@@ -29,7 +29,7 @@ recommended because it matches the hosted setup and avoids browser-specific `fil
 
 ## Editing: bump the cache buster
 
-`index.html` loads `styles.css?v=69`, `pdf-export.js?v=76` and `app.js?v=59`. **Increment that number whenever you change
+`index.html` loads `styles.css?v=70`, `pdf-export.js?v=76` and `app.js?v=61`. **Increment that number whenever you change
 either file.** Browsers cache both aggressively; without it an edit can appear to do nothing, and —
 worse — the form can still *print* with the old layout even though the screen looks current. This
 has already caused one bad 6-page print of a form that lays out correctly in 3.
